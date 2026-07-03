@@ -65,11 +65,14 @@ jobs:
           mkdir -p stage/api
           cp -r src public vendor composer.json composer.lock sql scripts stage/api/
           ( cd stage/api && zip -qr "$GITHUB_WORKSPACE/payload.zip" . )
-          TOKEN="$(openssl rand -hex 16)"
-          echo "::add-mask::$TOKEN"
-          echo "UNPACK_TOKEN=$TOKEN" >> "$GITHUB_ENV"
-          sed "s/__UNPACK_TOKEN__/$TOKEN/" deploy/unpack.php > unpack.php
-          ls -l payload.zip unpack.php
+          ls -lh payload.zip
+
+      - name: Extraer payload localmente
+        run: |
+          set -euo pipefail
+          mkdir -p api-extracted
+          unzip -q payload.zip -d api-extracted
+          ls -la api-extracted
 
       - name: Configurar clave SSH
         run: |
@@ -77,7 +80,7 @@ jobs:
           echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_deploy
           chmod 600 ~/.ssh/id_deploy
 
-      - name: Subir artefacto por SFTP
+      - name: Desplegar API por SFTP
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
@@ -88,16 +91,9 @@ jobs:
             -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
             -b - "$DEPLOY_USER@$DEPLOY_HOST" <<EOF
           -mkdir $REMOTE_PRIVATE_DIR
-          put payload.zip $REMOTE_PRIVATE_DIR/payload.zip
-          put unpack.php $REMOTE_PRIVATE_DIR/unpack.php
+          -rm -rf $REMOTE_PRIVATE_DIR/*
+          lcd api-extracted
+          mirror -R --verbose . $REMOTE_PRIVATE_DIR
+          bye
           EOF
-
-      - name: Extraer en el servidor (PHP) y verificar
-        run: |
-          set -euo pipefail
-          echo "Extrayendo payload..."
-          ssh -i "$HOME/.ssh/id_deploy" -p "${{ secrets.DEPLOY_PORT }}" \
-            -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-            "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" \
-            "cd $REMOTE_PRIVATE_DIR && php unpack.php"
           echo "✅ Deployment completed"
