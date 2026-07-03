@@ -7,7 +7,7 @@ use App\Controller\HealthController;
 use Slim\App;
 
 /**
- * Rutas de autenticación y salud. El mapeo URL → controlador vive aquí;
+ * Rutas de autenticación, salud, posts y usuarios. El mapeo URL → controlador vive aquí;
  * la lógica está en App\Controller\* (arquitectura MVC).
  */
 return function (App $app): void {
@@ -15,4 +15,12 @@ return function (App $app): void {
     $app->post('/login', [AuthController::class, 'login']);
     $app->post('/login/verify', [AuthController::class, 'verify']);
     $app->get('/me', [AuthController::class, 'me']);
+
+    // Incluir rutas de usuarios
+    (require __DIR__ . '/routes-users.php')($app);
+
+    // Incluir rutas de posts (si existen)
+    if (file_exists(__DIR__ . '/routes-posts.php')) {
+        (require __DIR__ . '/routes-posts.php')($app);
+    }
 };

@@ -3,7 +3,7 @@
 -- por contenido dinámico en MySQL/MariaDB. En HestiaCP usar la BD ya creada e
 -- importar SOLO las sentencias CREATE TABLE (sin USE).
 
--- USE hal_noticias;  -- (solo en local; en Hestia seleccionar la BD en phpMyAdmin)
+-- USE haladminweb_noticias_bd;  -- (solo en local; en Hestia seleccionar la BD en phpMyAdmin)
 
 CREATE TABLE IF NOT EXISTS posts (
   id                INT UNSIGNED  NOT NULL AUTO_INCREMENT,

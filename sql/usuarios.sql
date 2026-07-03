@@ -2,9 +2,9 @@
 -- Ejecutar en MySQL/MariaDB. En HestiaCP usar la BD ya creada (haladminweb_noticias_bd)
 -- y omitir las dos primeras líneas (CREATE DATABASE / USE).
 
-CREATE DATABASE IF NOT EXISTS hal_noticias
-  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE hal_noticias;
+-- CREATE DATABASE IF NOT EXISTS haladminweb_noticias_bd
+--   CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+-- USE haladminweb_noticias_bd;
 
 CREATE TABLE IF NOT EXISTS usuarios (
   id              INT UNSIGNED    NOT NULL AUTO_INCREMENT,
