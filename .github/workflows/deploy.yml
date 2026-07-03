@@ -16,7 +16,7 @@ env:
   # Ruta del dominio relativa al home (acceso SFTP-only)
   REMOTE_DOMAIN_DIR: web/noticias.hospitalantoniolorena.gob.pe
   REMOTE_PRIVATE_DIR: web/noticias.hospitalantoniolorena.gob.pe/private
-  BASE_URL: https://www.noticias.hospitalantoniolorena.gob.pe
+  BASE_URL: https://noticias.hospitalantoniolorena.gob.pe
 
 jobs:
   # Ejecuta los tests (PHPUnit) antes de desplegar. El job de deploy depende de
@@ -94,14 +94,11 @@ jobs:
           mkdir -p stage/api
           cp -r src public vendor composer.json composer.lock sql scripts .env stage/api/
           ( cd stage/api && zip -qr "$GITHUB_WORKSPACE/payload.zip" . )
-          ls -lh payload.zip
-
-      - name: Extraer payload localmente
-        run: |
-          set -euo pipefail
-          mkdir -p api-extracted
-          unzip -q payload.zip -d api-extracted
-          ls -la api-extracted
+          TOKEN="$(openssl rand -hex 16)"
+          echo "::add-mask::$TOKEN"
+          echo "UNPACK_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+          sed "s/__UNPACK_TOKEN__/$TOKEN/" deploy/unpack.php > unpack.php
+          ls -l payload.zip unpack.php
 
       - name: Configurar clave SSH
         run: |
@@ -109,28 +106,32 @@ jobs:
           echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_deploy
           chmod 600 ~/.ssh/id_deploy
 
-      - name: Instalar lftp
-        run: sudo apt-get update && sudo apt-get install -y lftp
-
-      - name: Desplegar API por SFTP
+      - name: Subir artefacto por SFTP
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
         run: |
-          KEY="$HOME/.ssh/id_deploy"
-          SSH="ssh -a -x -i $KEY -p $DEPLOY_PORT -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
-          lftp -e "
-            set sftp:connect-program '$SSH';
-            set sftp:auto-confirm yes;
-            set net:max-retries 5;
-            set net:persist-retries 10;
-            set net:timeout 30;
-            set xfer:clobber on;
-            set mirror:parallel-transfer-count 1;
-            open -u $DEPLOY_USER, sftp://$DEPLOY_HOST;
-            mkdir -p -f $REMOTE_PRIVATE_DIR;
-            mirror -R --delete --no-perms --verbose ./api-extracted/ $REMOTE_PRIVATE_DIR;
-            bye
-          "
+          set -euo pipefail
+          sftp -i "$HOME/.ssh/id_deploy" -P "$DEPLOY_PORT" \
+            -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+            -b - "$DEPLOY_USER@$DEPLOY_HOST" <<EOF
+          -mkdir $REMOTE_DOMAIN_DIR/private
+          -mkdir $REMOTE_DOMAIN_DIR/private/api
+          -mkdir $REMOTE_DOMAIN_DIR/public_html
+          -mkdir $REMOTE_DOMAIN_DIR/public_html/api
+          put payload.zip $REMOTE_DOMAIN_DIR/public_html/api/payload.zip
+          put unpack.php $REMOTE_DOMAIN_DIR/public_html/api/unpack.php
+          put deploy/public_html-api/index.php $REMOTE_DOMAIN_DIR/public_html/api/index.php
+          put deploy/public_html-api/.htaccess $REMOTE_DOMAIN_DIR/public_html/api/.htaccess
+          EOF
+
+      - name: Extraer en el servidor (PHP) y verificar
+        run: |
+          set -euo pipefail
+          echo "Extrayendo payload..."
+          curl -k -fsS "$BASE_URL/api/unpack.php?token=$UNPACK_TOKEN"
+          echo "Comprobando /api/health..."
+          curl -k -fsS "$BASE_URL/api/health"
+          echo
           echo "✅ Deployment completed"
