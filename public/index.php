@@ -24,8 +24,7 @@ if ($basePath !== '') {
 // Middlewares (se ejecutan en orden inverso al registro)
 (require __DIR__ . '/../src/middleware.php')($app);
 
-// Rutas
+// Rutas (routes.php las incluye si existen)
 (require __DIR__ . '/../src/routes.php')($app);
-(require __DIR__ . '/../src/routes-posts.php')($app);
 
 $app->run();
