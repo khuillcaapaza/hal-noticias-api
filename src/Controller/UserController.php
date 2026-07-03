@@ -27,7 +27,7 @@ final class UserController extends Controller
      */
     public function adminIndex(Request $request, Response $response): Response
     {
-        if ($this->userRole() !== 'admin') {
+        if ($this->userRole($request) !== 'admin') {
             return $this->json($response, ['error' => 'Acceso denegado'], 403);
         }
 
@@ -53,7 +53,7 @@ final class UserController extends Controller
      */
     public function adminStore(Request $request, Response $response): Response
     {
-        if ($this->userRole() !== 'admin') {
+        if ($this->userRole($request) !== 'admin') {
             return $this->json($response, ['error' => 'Acceso denegado'], 403);
         }
 
@@ -90,7 +90,7 @@ final class UserController extends Controller
      */
     public function adminUpdate(Request $request, Response $response, array $args): Response
     {
-        if ($this->userRole() !== 'admin') {
+        if ($this->userRole($request) !== 'admin') {
             return $this->json($response, ['error' => 'Acceso denegado'], 403);
         }
 
@@ -114,14 +114,14 @@ final class UserController extends Controller
      */
     public function adminDelete(Request $request, Response $response, array $args): Response
     {
-        if ($this->userRole() !== 'admin') {
+        if ($this->userRole($request) !== 'admin') {
             return $this->json($response, ['error' => 'Acceso denegado'], 403);
         }
 
         $id = (int) $args['id'];
 
         // Evitar que se elimine el propio admin
-        if ($id === $this->userId()) {
+        if ($id === $this->userId($request)) {
             return $this->json($response, ['error' => 'No puedes eliminar tu propia cuenta'], 400);
         }
 
@@ -138,7 +138,7 @@ final class UserController extends Controller
      */
     public function adminResetPassword(Request $request, Response $response, array $args): Response
     {
-        if ($this->userRole() !== 'admin') {
+        if ($this->userRole($request) !== 'admin') {
             return $this->json($response, ['error' => 'Acceso denegado'], 403);
         }
 
@@ -170,7 +170,7 @@ final class UserController extends Controller
             return $this->json($response, ['error' => 'Se requieren contraseña actual y nueva'], 400);
         }
 
-        $userId = $this->userId();
+        $userId = $this->userId($request);
         if (!$userId) {
             return $this->json($response, ['error' => 'Usuario no autenticado'], 401);
         }
@@ -200,7 +200,7 @@ final class UserController extends Controller
      */
     public function me(Request $request, Response $response): Response
     {
-        $userId = $this->userId();
+        $userId = $this->userId($request);
         if (!$userId) {
             return $this->json($response, ['error' => 'Usuario no autenticado'], 401);
         }
