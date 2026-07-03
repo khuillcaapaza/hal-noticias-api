@@ -59,11 +59,40 @@ jobs:
       - name: Instalar dependencias (producción)
         run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
 
+      - name: Crear .env para producción
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASS: ${{ secrets.DB_PASS }}
+        run: |
+          cat > .env << 'EOF'
+          APP_BASE_PATH=/api
+          AUTH_ENABLED=true
+          JWT_SECRET=${JWT_SECRET}
+          JWT_TTL=28800
+          DB_HOST=${DB_HOST}
+          DB_PORT=${DB_PORT}
+          DB_NAME=${DB_NAME}
+          DB_USER=${DB_USER}
+          DB_PASS=${DB_PASS}
+          CORS_ORIGINS=https://noticias.hospitalantoniolorena.gob.pe
+          MAILER_HOST=localhost
+          MAILER_PORT=25
+          MAILER_FROM=noticias@hospitalantoniolorena.gob.pe
+          MAILER_FROM_NAME=Sistema de Noticias
+          AUTH_2FA_DEV=false
+          APP_DEBUG=false
+          APP_SECURE=true
+          EOF
+
       - name: Preparar artefacto (zip + extractor)
         run: |
           set -euo pipefail
           mkdir -p stage/api
-          cp -r src public vendor composer.json composer.lock sql scripts stage/api/
+          cp -r src public vendor composer.json composer.lock sql scripts .env stage/api/
           ( cd stage/api && zip -qr "$GITHUB_WORKSPACE/payload.zip" . )
           ls -lh payload.zip
 
