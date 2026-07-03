@@ -68,7 +68,7 @@ jobs:
           DB_USER: ${{ secrets.DB_USER }}
           DB_PASS: ${{ secrets.DB_PASS }}
         run: |
-          cat > .env << 'EOF'
+          cat > .env << EOF
           APP_BASE_PATH=/api
           AUTH_ENABLED=true
           JWT_SECRET=${JWT_SECRET}
@@ -82,7 +82,7 @@ jobs:
           MAILER_HOST=localhost
           MAILER_PORT=25
           MAILER_FROM=noticias@hospitalantoniolorena.gob.pe
-          MAILER_FROM_NAME=Sistema de Noticias
+          MAILER_FROM_NAME="Sistema de Noticias"
           AUTH_2FA_DEV=false
           APP_DEBUG=false
           APP_SECURE=true
