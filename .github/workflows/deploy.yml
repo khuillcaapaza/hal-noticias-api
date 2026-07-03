@@ -80,20 +80,28 @@ jobs:
           echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_deploy
           chmod 600 ~/.ssh/id_deploy
 
+      - name: Instalar lftp
+        run: sudo apt-get update && sudo apt-get install -y lftp
+
       - name: Desplegar API por SFTP
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
         run: |
-          set -euo pipefail
-          sftp -i "$HOME/.ssh/id_deploy" -P "$DEPLOY_PORT" \
-            -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-            -b - "$DEPLOY_USER@$DEPLOY_HOST" <<EOF
-          -mkdir $REMOTE_PRIVATE_DIR
-          -rm -rf $REMOTE_PRIVATE_DIR/*
-          lcd api-extracted
-          mirror -R --verbose . $REMOTE_PRIVATE_DIR
-          bye
-          EOF
+          KEY="$HOME/.ssh/id_deploy"
+          SSH="ssh -a -x -i $KEY -p $DEPLOY_PORT -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+          lftp -e "
+            set sftp:connect-program '$SSH';
+            set sftp:auto-confirm yes;
+            set net:max-retries 5;
+            set net:persist-retries 10;
+            set net:timeout 30;
+            set xfer:clobber on;
+            set mirror:parallel-transfer-count 1;
+            open -u $DEPLOY_USER, sftp://$DEPLOY_HOST;
+            mkdir -p -f $REMOTE_PRIVATE_DIR;
+            mirror -R --delete --no-perms --verbose ./api-extracted/ $REMOTE_PRIVATE_DIR;
+            bye
+          "
           echo "✅ Deployment completed"
