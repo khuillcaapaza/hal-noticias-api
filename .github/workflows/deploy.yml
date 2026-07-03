@@ -1,4 +1,4 @@
-name: Deploy API (hal-convocatorias-api)
+name: Deploy API (hal-noticias-api)
 
 on:
   push:
@@ -9,14 +9,14 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: deploy-convocatorias-api
+  group: deploy-noticias-api
   cancel-in-progress: false
 
 env:
-  # TODO: crear el subdominio en HestiaCP y ajustar estos valores reales
   # Ruta del dominio relativa al home (acceso SFTP-only)
-  REMOTE_DOMAIN_DIR: web/convocatorias.hospitalantoniolorena.gob.pe
-  BASE_URL: https://convocatorias.hospitalantoniolorena.gob.pe
+  REMOTE_DOMAIN_DIR: web/noticias.hospitalantoniolorena.gob.pe
+  REMOTE_PRIVATE_DIR: web/noticias.hospitalantoniolorena.gob.pe/private
+  BASE_URL: https://www.noticias.hospitalantoniolorena.gob.pe
 
 jobs:
   # Ejecuta los tests (PHPUnit) antes de desplegar. El job de deploy depende de
@@ -27,10 +27,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup PHP 8.2
+      - name: Setup PHP 8.3
         uses: shivammathur/setup-php@v2
         with:
-          php-version: "8.2"
+          php-version: "8.3"
           tools: composer:v2
           extensions: pdo, pdo_mysql, mbstring, zip
 
@@ -49,10 +49,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup PHP 8.2
+      - name: Setup PHP 8.3
         uses: shivammathur/setup-php@v2
         with:
-          php-version: "8.2"
+          php-version: "8.3"
           tools: composer:v2
           extensions: pdo, pdo_mysql, mbstring, zip
 
@@ -87,21 +87,17 @@ jobs:
           sftp -i "$HOME/.ssh/id_deploy" -P "$DEPLOY_PORT" \
             -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
             -b - "$DEPLOY_USER@$DEPLOY_HOST" <<EOF
-          -mkdir $REMOTE_DOMAIN_DIR/private
-          -mkdir $REMOTE_DOMAIN_DIR/private/api
-          -mkdir $REMOTE_DOMAIN_DIR/public_html
-          -mkdir $REMOTE_DOMAIN_DIR/public_html/api
-          put payload.zip $REMOTE_DOMAIN_DIR/public_html/api/payload.zip
-          put unpack.php $REMOTE_DOMAIN_DIR/public_html/api/unpack.php
-          put deploy/public_html-api/index.php $REMOTE_DOMAIN_DIR/public_html/api/index.php
-          put deploy/public_html-api/.htaccess $REMOTE_DOMAIN_DIR/public_html/api/.htaccess
+          -mkdir $REMOTE_PRIVATE_DIR
+          put payload.zip $REMOTE_PRIVATE_DIR/payload.zip
+          put unpack.php $REMOTE_PRIVATE_DIR/unpack.php
           EOF
 
       - name: Extraer en el servidor (PHP) y verificar
         run: |
           set -euo pipefail
           echo "Extrayendo payload..."
-          curl -k -fsS "$BASE_URL/api/unpack.php?token=$UNPACK_TOKEN"
-          echo "Comprobando /api/health..."
-          curl -k -fsS "$BASE_URL/api/health"
-          echo
+          ssh -i "$HOME/.ssh/id_deploy" -p "${{ secrets.DEPLOY_PORT }}" \
+            -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+            "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" \
+            "cd $REMOTE_PRIVATE_DIR && php unpack.php"
+          echo "✅ Deployment completed"
