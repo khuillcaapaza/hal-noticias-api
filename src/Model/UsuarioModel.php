@@ -45,7 +45,7 @@ class UsuarioModel
     public function porId(int $id): ?array
     {
         $stmt = $this->pdo->prepare(
-            'SELECT id, usuario, email, nombre, rol, activo, creado_en, actualizado_en
+            'SELECT id, usuario, email, password_hash, nombre, rol, activo, creado_en, actualizado_en
              FROM usuarios WHERE id = ?'
         );
         $stmt->execute([$id]);
