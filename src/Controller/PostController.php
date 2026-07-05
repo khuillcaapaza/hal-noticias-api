@@ -363,7 +363,8 @@ final class PostController extends Controller
 
     /** Convierte un texto a slug (minúsculas, sin tildes, separado por guiones). */
     private function slugify(string $s): string    {
-        $s = mb_strtolower(trim($s));
+        $s = $this->normalizarEstilizado(trim($s));
+        $s = mb_strtolower($s);
         $s = strtr($s, [
             'á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u',
             'à' => 'a', 'è' => 'e', 'ì' => 'i', 'ò' => 'o', 'ù' => 'u',
@@ -373,6 +374,56 @@ final class PostController extends Controller
         $s = preg_replace('/[^a-z0-9]+/', '-', $s) ?? '';
 
         return trim($s, '-');
+    }
+
+    /**
+     * Convierte caracteres "estilizados" del bloque Unicode Mathematical
+     * Alphanumeric Symbols (el texto en negrita/cursiva de redes sociales, p.ej.
+     * 𝗛𝗢𝗟𝗔) a su equivalente ASCII A-Z/a-z/0-9. Es autónomo (solo mbstring),
+     * sin depender de la extensión intl. Los demás caracteres se dejan igual.
+     */
+    private function normalizarEstilizado(string $s): string
+    {
+        // Inicio de cada bloque de letras (26 mayúsculas A-Z + 26 minúsculas a-z).
+        static $letras = [
+            0x1D400, 0x1D434, 0x1D468, 0x1D49C, 0x1D4D0, 0x1D504,
+            0x1D538, 0x1D56C, 0x1D5A0, 0x1D5D4, 0x1D608, 0x1D63C, 0x1D670,
+        ];
+        // Inicio de cada bloque de dígitos (10 dígitos 0-9).
+        static $digitos = [0x1D7CE, 0x1D7D8, 0x1D7E2, 0x1D7EC, 0x1D7F6];
+
+        $salida = '';
+        $len = mb_strlen($s, 'UTF-8');
+        for ($i = 0; $i < $len; $i++) {
+            $ch = mb_substr($s, $i, 1, 'UTF-8');
+            $cp = mb_ord($ch, 'UTF-8');
+            $mapeado = null;
+
+            if ($cp !== false) {
+                foreach ($letras as $base) {
+                    if ($cp >= $base && $cp < $base + 26) {
+                        $mapeado = chr(ord('A') + ($cp - $base));
+                        break;
+                    }
+                    if ($cp >= $base + 26 && $cp < $base + 52) {
+                        $mapeado = chr(ord('a') + ($cp - $base - 26));
+                        break;
+                    }
+                }
+                if ($mapeado === null) {
+                    foreach ($digitos as $base) {
+                        if ($cp >= $base && $cp < $base + 10) {
+                            $mapeado = chr(ord('0') + ($cp - $base));
+                            break;
+                        }
+                    }
+                }
+            }
+
+            $salida .= $mapeado ?? $ch;
+        }
+
+        return $salida;
     }
 
     /**
