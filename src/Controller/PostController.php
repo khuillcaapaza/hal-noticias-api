@@ -26,7 +26,7 @@ final class PostController extends Controller
     private PostModel $posts;
     private ImagenModel $imagenes;
 
-    /** @var callable(string, string, string): bool */
+    /** @var callable(string, string, string, string): bool */
     private $relayDelete;
 
     public function __construct(
@@ -72,6 +72,17 @@ final class PostController extends Controller
     public function show(Request $request, Response $response, array $args): Response
     {
         $post = $this->posts->publicadoPorSlug((string) $args['slug']);
+        if ($post === null) {
+            return $this->json($response, ['error' => 'Post no encontrado'], 404);
+        }
+
+        return $this->json($response, ['post' => $post]);
+    }
+
+    /** GET /posts/by-uuid/{uuid} — un post publicado con sus imágenes por UUID. */
+    public function showByUuid(Request $request, Response $response, array $args): Response
+    {
+        $post = $this->posts->publicadoPorUuid((string) $args['uuid']);
         if ($post === null) {
             return $this->json($response, ['error' => 'Post no encontrado'], 404);
         }
@@ -169,9 +180,11 @@ final class PostController extends Controller
 
         // Borrar primero los binarios físicos (reenviando al servicio de archivos).
         $auth       = $request->getHeaderLine('Authorization');
+        $postUuid   = (string) $post['uuid'];
         $noBorrados = [];
         foreach ($post['imagenes'] as $img) {
-            if (!$this->relayBorrado($slug, (string) $img['name'], $auth)) {
+            $subfolder = $img['isCover'] ? 'cover' : 'foto';
+            if (!$this->relayBorrado($postUuid, $subfolder, (string) $img['name'], $auth)) {
                 $noBorrados[] = $img['name'];
             }
         }
@@ -215,7 +228,7 @@ final class PostController extends Controller
             $auth     = $request->getHeaderLine('Authorization');
             $anterior = $this->imagenes->portadaDe($id);
             if ($anterior !== null) {
-                $this->relayBorrado($slug, (string) $anterior['nombre_archivo'], $auth);
+                $this->relayBorrado((string) $args['uuid'], 'cover', (string) $anterior['nombre_archivo'], $auth);
                 $this->imagenes->eliminar((int) $anterior['id']);
             }
             $this->imagenes->limpiarPortada($id);
@@ -242,14 +255,20 @@ final class PostController extends Controller
             return $this->json($response, ['error' => 'Post no encontrado'], 404);
         }
 
-        $imagenId = (int) $args['id'];
-        $imagen   = $this->imagenes->buscar($imagenId, $pid);
+        $imagenId  = (int) $args['id'];
+        $imagen    = $this->imagenes->buscar($imagenId, $pid);
         if ($imagen === null) {
             return $this->json($response, ['error' => 'Imagen no encontrada'], 404);
         }
 
-        $auth    = $request->getHeaderLine('Authorization');
-        $borrado = $this->relayBorrado($slug, (string) $imagen['nombre_archivo'], $auth);
+        $auth      = $request->getHeaderLine('Authorization');
+        $subfolder = (int) $imagen['es_portada'] === 1 ? 'cover' : 'foto';
+        $borrado   = $this->relayBorrado(
+            (string) $args['uuid'],
+            $subfolder,
+            (string) $imagen['nombre_archivo'],
+            $auth
+        );
 
         $this->imagenes->eliminar($imagenId);
 
@@ -430,13 +449,13 @@ final class PostController extends Controller
      * Reenvía la orden de borrado físico a hal-archivos-api (servidor-a-servidor),
      * propagando la cabecera Authorization del administrador. Devuelve éxito.
      */
-    private function relayBorrado(string $slug, string $nombre, string $auth): bool
+    private function relayBorrado(string $uuid, string $subfolder, string $nombre, string $auth): bool
     {
-        return ($this->relayDelete)($slug, $nombre, $auth);
+        return ($this->relayDelete)($uuid, $subfolder, $nombre, $auth);
     }
 
     /** Implementación HTTP real del relay (curl). Aislada para poder inyectarse en tests. */
-    private function relayBorradoHttp(string $slug, string $nombre, string $auth): bool
+    private function relayBorradoHttp(string $uuid, string $subfolder, string $nombre, string $auth): bool
     {
         $base = rtrim((string) ($_ENV['FILES_API_BASE_URL'] ?? ''), '/');
         if ($base === '' || !function_exists('curl_init')) {
@@ -452,7 +471,7 @@ final class PostController extends Controller
         $ch = curl_init($base . '/posts/delete');
         curl_setopt_array($ch, [
             CURLOPT_CUSTOMREQUEST  => 'DELETE',
-            CURLOPT_POSTFIELDS     => json_encode(['slug' => $slug, 'nombre' => $nombre]),
+            CURLOPT_POSTFIELDS     => json_encode(['uuid' => $uuid, 'subfolder' => $subfolder, 'nombre' => $nombre]),
             CURLOPT_HTTPHEADER     => $headers,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT        => 10,

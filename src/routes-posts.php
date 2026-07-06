@@ -14,6 +14,7 @@ use Slim\App;
 return function (App $app): void {
     // Lectura pública.
     $app->get('/posts', [PostController::class, 'index']);
+    $app->get('/posts/by-uuid/{uuid}', [PostController::class, 'showByUuid']);
     $app->get('/posts/{slug}', [PostController::class, 'show']);
 
     // Administración (requiere JWT).

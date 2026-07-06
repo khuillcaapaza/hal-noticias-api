@@ -209,7 +209,27 @@ class PostModel
         }
 
         $post             = $this->map($row);
-        $imagenes         = $this->imagenesDe((int) $row['id'], (string) $row['slug']);
+        $imagenes         = $this->imagenesDe((int) $row['id'], (string) $row['uuid']);
+        $post['imagenes'] = $imagenes;
+        $post['cover']    = $this->coverDe($imagenes);
+
+        return $post;
+    }
+
+    /** Un post publicado completo (con imágenes) por uuid, o null. */
+    public function publicadoPorUuid(string $uuid): ?array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT * FROM posts WHERE uuid = ? AND publicado = 1 LIMIT 1'
+        );
+        $stmt->execute([$uuid]);
+        $row = $stmt->fetch();
+        if ($row === false) {
+            return null;
+        }
+
+        $post             = $this->map($row);
+        $imagenes         = $this->imagenesDe((int) $row['id'], (string) $row['uuid']);
         $post['imagenes'] = $imagenes;
         $post['cover']    = $this->coverDe($imagenes);
 
@@ -237,8 +257,9 @@ class PostModel
             return null;
         }
 
+        $uuid             = (string) $row['uuid'];
         $post             = $this->map($row);
-        $imagenes         = $this->imagenesDe((int) $row['id'], $slug);
+        $imagenes         = $this->imagenesDe((int) $row['id'], $uuid);
         $post['imagenes'] = $imagenes;
         $post['cover']    = $this->coverDe($imagenes);
 
@@ -318,8 +339,8 @@ class PostModel
 
     // ── Imágenes (forma de salida para el front) ──────────────────────
 
-    /** Lista las imágenes de un post con su URL pública. */
-    public function imagenesDe(int $postId, string $slug): array
+    /** Lista las imágenes de un post con su URL pública basada en uuid. */
+    public function imagenesDe(int $postId, string $uuid): array
     {
         $stmt = $this->pdo->prepare(
             'SELECT id, nombre_archivo, ext, tamano, es_portada, orden
@@ -330,14 +351,15 @@ class PostModel
 
         $base = rtrim((string) ($_ENV['ARCHIVOS_BASE_URL'] ?? ''), '/');
 
-        return array_map(static function (array $r) use ($base, $slug): array {
+        return array_map(static function (array $r) use ($base, $uuid): array {
+            $subfolder = (int) $r['es_portada'] === 1 ? 'cover' : 'foto';
             return [
                 'id'        => (int) $r['id'],
                 'name'      => $r['nombre_archivo'],
                 'ext'       => $r['ext'],
                 'size'      => (int) $r['tamano'],
                 'isCover'   => (int) $r['es_portada'] === 1,
-                'url'       => $base . '/' . $slug . '/' . rawurlencode((string) $r['nombre_archivo']),
+                'url'       => $base . '/' . $uuid . '/' . $subfolder . '/' . rawurlencode((string) $r['nombre_archivo']),
             ];
         }, $stmt->fetchAll());
     }
@@ -377,12 +399,13 @@ class PostModel
     {
         $base    = rtrim((string) ($_ENV['ARCHIVOS_BASE_URL'] ?? ''), '/');
         $portada = (string) ($row['portada'] ?? '');
-        $cover   = $portada !== ''
-            ? $base . '/' . $row['slug'] . '/' . rawurlencode($portada)
+        $uuid    = (string) ($row['uuid'] ?? '');
+        $cover   = ($portada !== '' && $uuid !== '')
+            ? $base . '/' . $uuid . '/cover/' . rawurlencode($portada)
             : null;
 
         return [
-            'uuid'       => $row['uuid'],
+            'uuid'       => $uuid,
             'slug'       => $row['slug'],
             'title'      => $row['titulo'],
             'excerpt'    => $row['excerpt'],

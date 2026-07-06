@@ -11,6 +11,11 @@ use Slim\App;
  * la lógica está en App\Controller\* (arquitectura MVC).
  */
 return function (App $app): void {
+    // Preflight CORS: el navegador envía OPTIONS antes de POST/DELETE cross-origin.
+    $app->options('/{routes:.+}', function ($request, $response) {
+        return $response;
+    });
+
     $app->get('/health', [HealthController::class, 'index']);
     $app->post('/login', [AuthController::class, 'login']);
     $app->post('/login/verify', [AuthController::class, 'verify']);

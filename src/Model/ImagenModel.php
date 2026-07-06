@@ -54,12 +54,12 @@ class ImagenModel
 
     /**
      * Busca una imagen por id dentro de un post.
-     * Devuelve [id, nombre_archivo, slug] o null.
+     * Devuelve [id, nombre_archivo, uuid, es_portada] o null.
      */
     public function buscar(int $id, int $postId): ?array
     {
         $stmt = $this->pdo->prepare(
-            'SELECT i.id, i.nombre_archivo, p.slug
+            'SELECT i.id, i.nombre_archivo, i.es_portada, p.uuid
                FROM post_imagenes i
                JOIN posts p ON p.id = i.post_id
               WHERE i.id = ? AND i.post_id = ? LIMIT 1'
