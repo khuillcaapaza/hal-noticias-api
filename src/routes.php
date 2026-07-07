@@ -17,8 +17,7 @@ return function (App $app): void {
     });
 
     $app->get('/health', [HealthController::class, 'index']);
-    $app->post('/login', [AuthController::class, 'login']);
-    $app->post('/login/verify', [AuthController::class, 'verify']);
+    // /me: permite al frontend verificar sesión (token emitido por hal-auth-api)
     $app->get('/me', [AuthController::class, 'me']);
 
     // Incluir rutas de usuarios
