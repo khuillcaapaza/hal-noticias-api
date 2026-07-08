@@ -88,8 +88,8 @@ jobs:
           SMTP_PASS=${SMTP_PASS}
           SMTP_FROM=noresponder@hospitalantoniolorena.gob.pe
           SMTP_FROM_NAME="Sistema de Noticias - Hospital Antonio Lorena"
-          FILES_API_BASE_URL=https://hospitalantoniolorena.gob.pe/files-api
-          ARCHIVOS_BASE_URL=https://hospitalantoniolorena.gob.pe/posts
+          FILES_API_BASE_URL=https://archivos.hospitalantoniolorena.gob.pe/files-api
+          ARCHIVOS_BASE_URL=https://archivos.hospitalantoniolorena.gob.pe/posts
           EOF
 
       - name: Preparar artefacto (zip + extractor)
