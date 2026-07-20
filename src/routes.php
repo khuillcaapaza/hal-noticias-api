@@ -7,7 +7,7 @@ use App\Controller\HealthController;
 use Slim\App;
 
 /**
- * Rutas de autenticación, salud, posts y usuarios. El mapeo URL → controlador vive aquí;
+ * Rutas de sesión, salud y posts. El mapeo URL → controlador vive aquí;
  * la lógica está en App\Controller\* (arquitectura MVC).
  */
 return function (App $app): void {
@@ -19,9 +19,6 @@ return function (App $app): void {
     $app->get('/health', [HealthController::class, 'index']);
     // /me: permite al frontend verificar sesión (token emitido por hal-auth-api)
     $app->get('/me', [AuthController::class, 'me']);
-
-    // Incluir rutas de usuarios
-    (require __DIR__ . '/routes-users.php')($app);
 
     // Incluir rutas de posts (si existen)
     if (file_exists(__DIR__ . '/routes-posts.php')) {
