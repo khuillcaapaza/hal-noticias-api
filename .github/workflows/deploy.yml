@@ -76,7 +76,7 @@ jobs:
           JWT_SECRET=${JWT_SECRET}
           JWT_TTL=28800
           AUTH_2FA_DEV=false
-          CORS_ORIGINS=https://hospitalantoniolorena.gob.pe,https://noticias.hospitalantoniolorena.gob.pe
+          CORS_ORIGINS=https://hospitalantoniolorena.gob.pe,https://www.hospitalantoniolorena.gob.pe,https://noticias.hospitalantoniolorena.gob.pe
           DB_HOST=${DB_HOST}
           DB_NAME=${DB_NAME}
           DB_USER=${DB_USER}
