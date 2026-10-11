@@ -70,6 +70,12 @@ class PostModel
             $where[]          = 'MONTH(p.fecha_publicacion) = :month';
             $params[':month'] = $month;
         }
+        // Color por familia (ej. "green" -> cover_color LIKE 'from-green-%').
+        $color = trim((string) ($f['color'] ?? ''));
+        if ($color !== '' && preg_match('/^[a-z]+$/', $color)) {
+            $where[]          = 'p.cover_color LIKE :color';
+            $params[':color'] = 'from-' . $color . '-%';
+        }
         $whereSql = implode(' AND ', $where);
 
         $stmtTotal = $this->pdo->prepare("SELECT COUNT(*) FROM posts p WHERE {$whereSql}");

@@ -51,6 +51,7 @@ final class PostController extends Controller
             'category' => $q['category'] ?? null,
             'year'     => $q['year']     ?? null,
             'month'    => $q['month']    ?? null,
+            'color'    => $q['color']    ?? null,
             'page'     => $q['page']     ?? null,
             'per_page' => $q['per_page'] ?? null,
         ]);
